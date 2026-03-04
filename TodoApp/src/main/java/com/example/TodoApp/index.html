@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Todo App</title>
+
+  <style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #121212;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+
+    .container {
+        background: #1e1e1e;
+        padding: 30px;
+        width: 450px;
+        border-radius: 12px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.6);
+    }
+
+    h1 {
+        text-align: center;
+        color: white;
+    }
+
+    .input-group {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+
+    input {
+        flex: 1;
+        padding: 10px;
+        border-radius: 6px;
+        border: none;
+        background: #2c2c2c;
+        color: white;
+    }
+
+    input::placeholder {
+        color: #aaa;
+    }
+
+    button {
+        padding: 10px 15px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+
+    .add-btn {
+        background: #00c853;
+        color: white;
+    }
+
+    .delete-btn {
+        background: #d50000;
+        color: white;
+    }
+
+    .todo {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #2a2a2a;
+        padding: 10px;
+        border-radius: 6px;
+        margin-top: 10px;
+        color: white;
+    }
+
+    .todo-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .completed {
+        text-decoration: line-through;
+        color: #888;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+  <h1>Todo App</h1>
+
+  <div class="input-group">
+    <input type="number" id="id" placeholder="Enter ID">
+  </div>
+
+  <div class="input-group">
+    <input type="text" id="task" placeholder="Enter Task">
+    <button class="add-btn" onclick="addTodo()">Add</button>
+  </div>
+
+  <div id="list"></div>
+</div>
+
+<script>
+
+  const API = "http://localhost:8080/todo";
+
+  function addTodo() {
+      const id = document.getElementById("id").value;
+      const name = document.getElementById("task").value;
+
+      if (!id || !name) {
+          alert("Enter ID and Task");
+          return;
+      }
+
+      fetch(API + "/list", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+              id: parseInt(id),
+              name: name,
+              completed: false
+          })
+      })
+      .then(() => {
+          document.getElementById("id").value = "";
+          document.getElementById("task").value = "";
+          loadTodos();
+      });
+  }
+
+  function loadTodos() {
+      fetch(API + "/list")
+      .then(res => res.json())
+      .then(data => {
+
+          const list = document.getElementById("list");
+          list.innerHTML = "";
+
+          data.forEach(todo => {
+
+              const div = document.createElement("div");
+              div.className = "todo";
+
+              const left = document.createElement("div");
+              left.className = "todo-left";
+
+              const checkbox = document.createElement("input");
+              checkbox.type = "checkbox";
+              checkbox.checked = todo.completed;
+
+              checkbox.addEventListener("change", function() {
+
+                  fetch(API + "/" + todo.id, {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                          id: todo.id,
+                          name: todo.name,
+                          completed: this.checked
+                      })
+                  })
+                  .then(() => loadTodos());
+
+              });
+
+              const span = document.createElement("span");
+              span.textContent = `(${todo.id}) ${todo.name}`;
+
+              if (todo.completed) {
+                  span.classList.add("completed");
+              }
+
+              left.appendChild(checkbox);
+              left.appendChild(span);
+
+              const deleteBtn = document.createElement("button");
+              deleteBtn.textContent = "Delete";
+              deleteBtn.className = "delete-btn";
+
+              deleteBtn.addEventListener("click", function() {
+                  fetch(API + "/" + todo.id, {
+                      method: "DELETE"
+                  })
+                  .then(() => loadTodos());
+              });
+
+              div.appendChild(left);
+              div.appendChild(deleteBtn);
+
+              list.appendChild(div);
+          });
+      });
+  }
+
+  loadTodos();
+
+</script>
+
+</body>
+</html>
